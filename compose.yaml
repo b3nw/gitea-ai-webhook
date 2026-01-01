@@ -1,0 +1,31 @@
+
+services:
+  ai-webhook:
+    build: .
+    container_name: gitea-ai-webhook
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GITEA_TOKEN=${GITEA_TOKEN}
+      # LLM Configuration
+      - LLM__PROVIDER=${LLM_PROVIDER:-OPENAI}
+      - LLM__META__MODEL=${LLM_MODEL:-gpt-4o}
+      # OpenAI / Compatible API Config
+      - LLM__HTTP_CLIENT__API_TOKEN=${OPENAI_API_KEY}
+      - LLM__HTTP_CLIENT__API_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1/}
+      # VCS Config
+      - VCS__PROVIDER=GITEA
+      - VCS__HTTP_CLIENT__API_TOKEN=${GITEA_TOKEN}
+      - VCS__HTTP_CLIENT__API_URL=${GITEA_API_URL:-http://gitea-server:3000/api/v1}
+    volumes:
+      - xai-cache:/root/.cache
+    networks:
+      - gitea_network
+
+volumes:
+  xai-cache:
+
+networks:
+  gitea_network:
+    external: true # Assuming Gitea is on a network, or remove if standalone
