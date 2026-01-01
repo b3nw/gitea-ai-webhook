@@ -20,12 +20,6 @@ services:
       - VCS__HTTP_CLIENT__API_URL=${GITEA_API_URL:-http://gitea-server:3000/api/v1}
     volumes:
       - xai-cache:/root/.cache
-    networks:
-      - gitea_network
 
 volumes:
   xai-cache:
-
-networks:
-  gitea_network:
-    external: true # Assuming Gitea is on a network, or remove if standalone
