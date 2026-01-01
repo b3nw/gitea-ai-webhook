@@ -1,7 +1,7 @@
 
 services:
   ai-webhook:
-    build: .
+    image: gitea.ext.ben.io/b3nw/gitea-ai-webhook:latest
     container_name: gitea-ai-webhook
     restart: always
     ports:
