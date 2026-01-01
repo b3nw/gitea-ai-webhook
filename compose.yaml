@@ -5,7 +5,7 @@ services:
     container_name: gitea-ai-webhook
     restart: always
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       - GITEA_TOKEN=${GITEA_TOKEN}
       # LLM Configuration
