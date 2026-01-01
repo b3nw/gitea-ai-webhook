@@ -25,7 +25,7 @@ Create a `.env` file with the following variables:
 | Variable | Required | Description | Default |
 | :--- | :--- | :--- | :--- |
 | `GITEA_TOKEN` | **Yes** | A Gitea Access Token. Required permissions: `repository` (Read), `issue` (Read and Write). | |
-| `GITEA_API_URL` | No | Full URL to your Gitea API (e.g., `http://gitea:3000/api/v1`). | |
+| `GITEA_BASE_URL` | No | Base URL of your Gitea instance (e.g., `http://gitea:3000` or `https://git.example.com`). | |
 | `PORT` | No | Host port to expose the webhook server on. | `3000` |
 | `OPENAI_API_KEY` | **Yes** | API Key for your LLM provider. Use `dummy` for local models if no auth needed. | |
 | `OPENAI_BASE_URL` | No | Base URL for the LLM API. Set this for Ollama/vLLM (e.g. `http://host.docker.internal:11434/v1/`). | `https://api.openai.com/v1/` |

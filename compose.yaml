@@ -17,7 +17,7 @@ services:
       # VCS Config
       - VCS__PROVIDER=GITEA
       - VCS__HTTP_CLIENT__API_TOKEN=${GITEA_TOKEN}
-      - VCS__HTTP_CLIENT__API_URL=${GITEA_API_URL:-http://gitea-server:3000/api/v1/}
+      - VCS__HTTP_CLIENT__API_URL=${GITEA_BASE_URL:-http://gitea-server:3000}/api/v1/
     volumes:
       - xai-cache:/root/.cache
 
