@@ -31,5 +31,3 @@ jobs:
           context: .
           push: true
           tags: gitea.ext.ben.io/${{ gitea.repository }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
