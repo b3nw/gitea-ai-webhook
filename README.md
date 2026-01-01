@@ -4,6 +4,7 @@
 A webhook-based service that automatically generates AI code reviews for Gitea Pull Requests using [xai-review](https://github.com/Nikita-Filonov/ai-review).
 
 ## Features
+*   **Integrated with AI**: Uses advanced LLMs for code analysis.
 *   **Zero-config per repository**: Works via a single Gitea System Webhook (or per-repo webhook).
 *   **Custom LLM Support**: Configuring it to use OpenAI, Ollama, vLLM, or any OpenAI-compatible endpoint.
 *   **Secure**: Runs in an isolated Docker container with strict context passed via environment variables.
