@@ -18,6 +18,8 @@ services:
       - VCS__PROVIDER=GITEA
       - VCS__HTTP_CLIENT__API_TOKEN=${GITEA_TOKEN}
       - VCS__HTTP_CLIENT__API_URL=${GITEA_API_URL}
+      # Review Config
+      - REVIEW__MAX_INLINE_COMMENTS=${REVIEW_MAX_COMMENTS:-3}
     volumes:
       - xai-cache:/root/.cache
 
