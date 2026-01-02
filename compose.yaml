@@ -11,6 +11,7 @@ services:
       # LLM Configuration
       - LLM__PROVIDER=${LLM_PROVIDER:-OPENAI}
       - LLM__META__MODEL=${LLM_MODEL:-gpt-4o}
+      - LLM__META__TEMPERATURE=${LLM_TEMPERATURE:-0.2}
       # OpenAI / Compatible API Config
       - LLM__HTTP_CLIENT__API_TOKEN=${OPENAI_API_KEY}
       - LLM__HTTP_CLIENT__API_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1/}
@@ -18,8 +19,9 @@ services:
       - VCS__PROVIDER=GITEA
       - VCS__HTTP_CLIENT__API_TOKEN=${GITEA_TOKEN}
       - VCS__HTTP_CLIENT__API_URL=${GITEA_API_URL}
-      # Review Config
+      # Review Config (max comments applies to both inline per-file and context per-MR)
       - REVIEW__MAX_INLINE_COMMENTS=${REVIEW_MAX_COMMENTS:-3}
+      - REVIEW__MAX_CONTEXT_COMMENTS=${REVIEW_MAX_COMMENTS:-3}
     volumes:
       - xai-cache:/root/.cache
 
