@@ -27,7 +27,8 @@ Create a `.env` file with the following variables:
 | `GITEA_TOKEN` | **Yes** | A Gitea Access Token. Required permissions: `repository` (Read), `issue` (Read and Write). | |
 | `GITEA_API_URL` | **Yes** | Full URL to your Gitea API (e.g., `https://git.example.com/api/v1`). | |
 | `PORT` | No | Host port to expose the webhook server on. | `3000` |
-| `REVIEW_MAX_COMMENTS` | No | Maximum number of AI comments (per-file for inline, total for context review). Set to `0` to disable. | `3` |
+| `REVIEW_MAX_COMMENTS` | No | Maximum total AI comments per PR (context review). Set to `0` to disable. | `3` |
+| `REVIEW_MAX_INLINE_COMMENTS` | No | Maximum inline comments per file. Set to `0` to disable. | `3` |
 | `OPENAI_API_KEY` | **Yes** | API Key for your LLM provider. Use `dummy` for local models if no auth needed. | |
 | `OPENAI_BASE_URL` | No | Base URL for the LLM API. Set this for Ollama/vLLM (e.g. `http://host.docker.internal:11434/v1/`). | `https://api.openai.com/v1/` |
 | `LLM_MODEL` | No | The model name to request (e.g. `gpt-4o`, `llama3.1`). | `gpt-4o` |
