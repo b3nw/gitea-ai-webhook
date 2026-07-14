@@ -15,9 +15,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install the AI Review tool
-# Installing directly from PyPI
-RUN pip install --no-cache-dir xai-review
+# Install the AI Review tool from a pinned GitHub commit (not PyPI)
+RUN pip install --no-cache-dir \
+  "git+https://github.com/b3nw/ai-review.git@764b124f155707f36ea38d327f0c443b65131ad4"
 
 # Copy application code
 COPY webhook_server.py .
