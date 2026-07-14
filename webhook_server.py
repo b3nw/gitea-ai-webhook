@@ -86,51 +86,108 @@ def ensure_self_requested_as_reviewer(payload: Dict[str, Any]) -> None:
         logger.exception("Reviewer request failed unexpectedly: reviewer=%s pr=%s/%s#%s", AI_REVIEWER_USERNAME, owner, name, pr_number)
 
 
-def _summary_comment_ids(repo: Dict[str, Any], pr_number: int) -> set[int]:
-    owner, name = _repo_identity(repo)
-    response = api_get(f"/repos/{quote(owner, safe='')}/{quote(name, safe='')}/issues/{pr_number}/comments?limit=100")
-    response.raise_for_status()
-    return {item["id"] for item in response.json() if isinstance(item, dict) and isinstance(item.get("id"), int) and item.get("user", {}).get("login") == AI_REVIEWER_USERNAME and "#ai-review-summary" in item.get("body", "")}
-
-
-def _is_clean_summary(body: object) -> bool:
-    if not isinstance(body, str):
-        return False
-    return bool(
-        re.search(
-            r"\*\*Status:\*\*\s*`No Issues Found`\s*\|\s*\*\*Recommendation:\*\*\s*`Approve`",
-            body,
-        )
-        and re.search(r"\|\s*CRITICAL\s*\|\s*`?0`?\s*\|", body)
-        and re.search(r"\|\s*WARNING\s*\|\s*`?0`?\s*\|", body)
-        and re.search(r"\|\s*SUGGESTION\s*\|\s*`?0`?\s*\|", body)
+def _is_ai_summary_comment(item: Dict[str, Any]) -> bool:
+    return (
+        isinstance(item, dict)
+        and isinstance(item.get("id"), int)
+        and item.get("user", {}).get("login") == AI_REVIEWER_USERNAME
+        and "#ai-review-summary" in item.get("body", "")
     )
 
 
-def approve_if_clean_summary(payload: Dict[str, Any], prior_summary_ids: set[int]) -> None:
+def _summary_comment_snapshot(repo: Dict[str, Any], pr_number: int) -> Dict[int, str]:
+    """Map AI summary comment id -> body, used to detect create or in-place update."""
+    owner, name = _repo_identity(repo)
+    response = api_get(f"/repos/{quote(owner, safe='')}/{quote(name, safe='')}/issues/{pr_number}/comments?limit=100")
+    response.raise_for_status()
+    return {
+        item["id"]: item.get("body", "")
+        for item in response.json()
+        if _is_ai_summary_comment(item)
+    }
+
+
+def _is_clean_summary(body: object) -> bool:
+    """Match either structured LLM summary or kilocode status-line clean results."""
+    if not isinstance(body, str):
+        return False
+    # Only evaluate the authoritative (latest) section when history is stacked.
+    latest = body.split("<!-- ai-review-history-separator -->", 1)[0]
+    clean_status = bool(
+        re.search(
+            r"(?:\*\*Status:\*\*|Status:)\s*`?No Issues Found`?\s*\|\s*"
+            r"(?:\*\*Recommendation:\*\*|Recommendation:)\s*`?(?:Approve|Merge)`?",
+            latest,
+            re.IGNORECASE,
+        )
+    )
+    zero_counts = (
+        re.search(r"\|\s*CRITICAL\s*\|\s*`?0`?\s*\|", latest)
+        and re.search(r"\|\s*WARNING\s*\|\s*`?0`?\s*\|", latest)
+        and re.search(r"\|\s*SUGGESTION\s*\|\s*`?0`?\s*\|", latest)
+    )
+    # Reject if the latest section still reports positive issue counts.
+    has_findings = bool(
+        re.search(r"(?:\*\*Status:\*\*|Status:)\s*`?\d+\s+Issues?\s+Found`?", latest, re.IGNORECASE)
+        or re.search(r"\|\s*(?:CRITICAL|WARNING|SUGGESTION)\s*\|\s*`?[1-9]\d*`?\s*\|", latest)
+    )
+    return bool(clean_status and zero_counts and not has_findings)
+
+
+def approve_if_clean_summary(payload: Dict[str, Any], prior_summaries: Dict[int, str]) -> None:
     repo = payload["repository"]
     owner, name = _repo_identity(repo)
     pr_number = payload["number"]
     head_sha = payload["pull_request"]["head"]["sha"]
     try:
-        response = api_get(f"/repos/{quote(owner, safe='')}/{quote(name, safe='')}/issues/{pr_number}/comments?limit=100")
-        response.raise_for_status()
-        new_summaries = [item for item in response.json() if isinstance(item, dict) and isinstance(item.get("id"), int) and item["id"] not in prior_summary_ids and item.get("user", {}).get("login") == AI_REVIEWER_USERNAME and "#ai-review-summary" in item.get("body", "")]
-        if not new_summaries:
-            logger.warning("Approval skipped: no new AI summary found for pr=%s/%s#%s", owner, name, pr_number)
+        current = _summary_comment_snapshot(repo, pr_number)
+        # New id, or same id with a rewritten body (history-stacking updates).
+        changed = [
+            (cid, body)
+            for cid, body in current.items()
+            if cid not in prior_summaries or prior_summaries[cid] != body
+        ]
+        if not changed:
+            logger.warning("Approval skipped: no new or updated AI summary found for pr=%s/%s#%s", owner, name, pr_number)
             return
-        summary = max(new_summaries, key=lambda item: item["id"])
-        if not _is_clean_summary(summary.get("body")):
-            logger.info("Approval skipped: new AI summary has findings or is not a valid clean result pr=%s/%s#%s summary_id=%s", owner, name, pr_number, summary["id"])
+        summary_id, summary_body = max(changed, key=lambda item: item[0])
+        if not _is_clean_summary(summary_body):
+            logger.info(
+                "Approval skipped: AI summary has findings or is not a valid clean result pr=%s/%s#%s summary_id=%s",
+                owner,
+                name,
+                pr_number,
+                summary_id,
+            )
             return
         reviews = api_get(f"/repos/{quote(owner, safe='')}/{quote(name, safe='')}/pulls/{pr_number}/reviews?limit=100")
         reviews.raise_for_status()
-        if any(item.get("user", {}).get("login") == AI_REVIEWER_USERNAME and item.get("state") == "APPROVED" and item.get("commit_id") == head_sha for item in reviews.json() if isinstance(item, dict)):
+        if any(
+            item.get("user", {}).get("login") == AI_REVIEWER_USERNAME
+            and item.get("state") == "APPROVED"
+            and item.get("commit_id") == head_sha
+            for item in reviews.json()
+            if isinstance(item, dict)
+        ):
             logger.info("Approval already present: pr=%s/%s#%s sha=%s", owner, name, pr_number, head_sha)
             return
-        approval = api_post(f"/repos/{quote(owner, safe='')}/{quote(name, safe='')}/pulls/{pr_number}/reviews", {"event": "APPROVED", "commit_id": head_sha, "body": f"✅ Automated review completed with no findings. See summary comment #{summary['id']}."})
+        approval = api_post(
+            f"/repos/{quote(owner, safe='')}/{quote(name, safe='')}/pulls/{pr_number}/reviews",
+            {
+                "event": "APPROVED",
+                "commit_id": head_sha,
+                "body": f"✅ Automated review completed with no findings. See summary comment #{summary_id}.",
+            },
+        )
         if approval.ok:
-            logger.info("AI review approved: pr=%s/%s#%s sha=%s summary_id=%s", owner, name, pr_number, head_sha, summary["id"])
+            logger.info(
+                "AI review approved: pr=%s/%s#%s sha=%s summary_id=%s",
+                owner,
+                name,
+                pr_number,
+                head_sha,
+                summary_id,
+            )
         else:
             logger.warning("AI approval failed: pr=%s/%s#%s status=%s", owner, name, pr_number, approval.status_code)
     except requests.RequestException:
@@ -203,7 +260,7 @@ def run_review_task(payload: Dict[str, Any], key: Optional[str] = None) -> None:
     logger.info("decision=started review=%s pr=#%s repo=%s sha=%s", key, pr_number, repo_name, head_sha)
     work_dir = tempfile.mkdtemp(prefix="gitea-review-")
     try:
-        prior_summary_ids = _summary_comment_ids(payload["repository"], pr_number)
+        prior_summaries = _summary_comment_snapshot(payload["repository"], pr_number)
         clean_clone_url = clone_url
         if GITEA_TOKEN and "://" in clone_url:
             protocol, address = clone_url.split("://", 1)
@@ -228,7 +285,7 @@ def run_review_task(payload: Dict[str, Any], key: Optional[str] = None) -> None:
         if result.returncode == 0:
             logger.info("decision=completed review=%s", key)
             logger.info(result.stdout)
-            approve_if_clean_summary(payload, prior_summary_ids)
+            approve_if_clean_summary(payload, prior_summaries)
         else:
             logger.error("decision=failed review=%s error=%s", key, result.stderr)
     except subprocess.CalledProcessError as exc:

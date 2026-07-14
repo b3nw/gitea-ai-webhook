@@ -115,3 +115,68 @@ def test_is_clean_summary_matches_structured_format():
 """
     assert server._is_clean_summary(body)
     assert not server._is_clean_summary(body.replace("`0`", "`1`", 1))
+
+
+def test_is_clean_summary_matches_kilocode_status_line():
+    body = """Status: No Issues Found | Recommendation: Merge
+
+## Code Review Summary
+
+**Status:** `No Issues Found` | **Recommendation:** `Approve`
+
+### Overview
+
+| Severity | Count |
+| --- | ---: |
+| CRITICAL | `0` |
+| WARNING | `0` |
+| SUGGESTION | `0` |
+
+#ai-review-summary
+"""
+    assert server._is_clean_summary(body)
+
+
+def test_is_clean_summary_uses_latest_section_only():
+    body = """Status: No Issues Found | Recommendation: Merge
+
+## Code Review Summary
+
+**Status:** `No Issues Found` | **Recommendation:** `Approve`
+
+### Overview
+
+| Severity | Count |
+| --- | ---: |
+| CRITICAL | `0` |
+| WARNING | `0` |
+| SUGGESTION | `0` |
+
+<!-- ai-review-history-separator -->
+
+### Previous review
+Status: 4 Issues Found | Recommendation: Address before merge
+| CRITICAL | `1` |
+#ai-review-summary
+"""
+    assert server._is_clean_summary(body)
+
+
+def test_is_clean_summary_rejects_conflicting_llm_body():
+    body = """Status: No Issues Found | Recommendation: Merge
+
+## Code Review Summary
+
+**Status:** `2 Issues Found` | **Recommendation:** `Address before merge`
+
+### Overview
+
+| Severity | Count |
+| --- | ---: |
+| CRITICAL | `1` |
+| WARNING | `1` |
+| SUGGESTION | `0` |
+
+#ai-review-summary
+"""
+    assert not server._is_clean_summary(body)
