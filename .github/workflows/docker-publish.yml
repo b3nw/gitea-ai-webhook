@@ -9,8 +9,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # Immutable deploy family for ai-review@70b003f + manual-command receiver
-  IMMUTABLE_TAG_PREFIX: kilocode-70b003f-receiver
+  # Immutable deploy family for ai-review@e7f09e5 (batch inline review) + receiver
+  IMMUTABLE_TAG_PREFIX: kilocode-e7f09e5-receiver
 
 jobs:
   build-and-push:
