@@ -1,13 +1,16 @@
-
 services:
   ai-webhook:
-    image: gitea.ext.ben.io/b3nw/gitea-ai-webhook:latest
+    image: ghcr.io/b3nw/gitea-ai-webhook:kilocode-764b124-receiver
     container_name: gitea-ai-webhook
     restart: always
     ports:
       - "${PORT:-3000}:3000"
     environment:
       - GITEA_TOKEN=${GITEA_TOKEN}
+      # Required by webhook_server.py authorization and manual review commands.
+      - GITEA_API_URL=${GITEA_API_URL}
+      # Optional reviewer login used for self-assignment / approval identity.
+      - AI_REVIEWER_USERNAME=${AI_REVIEWER_USERNAME:-ai-reviewer}
       # LLM Configuration
       - LLM__PROVIDER=${LLM_PROVIDER:-OPENAI}
       - LLM__META__MODEL=${LLM_MODEL:-gpt-4o}
@@ -22,6 +25,9 @@ services:
       # Review Config (inline=per file, context=per MR total)
       - REVIEW__MAX_INLINE_COMMENTS=${REVIEW_MAX_INLINE_COMMENTS:-3}
       - REVIEW__MAX_CONTEXT_COMMENTS=${REVIEW_MAX_COMMENTS:-3}
+      # Prompt Overrides
+      - PROMPT__INLINE_PROMPT_FILES=${PROMPT__INLINE_PROMPT_FILES:-["/app/prompts/inline.md"]}
+      - PROMPT__SUMMARY_PROMPT_FILES=${PROMPT__SUMMARY_PROMPT_FILES:-["/app/prompts/summary.md"]}
     volumes:
       - xai-cache:/root/.cache
 

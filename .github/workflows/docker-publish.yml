@@ -9,8 +9,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # Immutable deploy tag for ai-review@764b124 (feat/kilocode-formatting)
-  IMMUTABLE_TAG: kilocode-764b124
+  # Immutable deploy family for ai-review@764b124 + manual-command receiver
+  IMMUTABLE_TAG_PREFIX: kilocode-764b124-receiver
 
 jobs:
   build-and-push:
@@ -38,7 +38,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.IMMUTABLE_TAG }}
+            type=sha,prefix=${{ env.IMMUTABLE_TAG_PREFIX }}-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
 
@@ -54,10 +54,12 @@ jobs:
 
       - name: Summary
         run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMMUTABLE_TAG_PREFIX }}-${SHORT_SHA}"
           {
             echo "## Image published"
             echo ""
-            echo "- **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMMUTABLE_TAG }}\`"
+            echo "- **Image:** \`${IMAGE_REF}\`"
             echo "- **Digest:** \`${{ steps.build.outputs.digest }}\`"
             echo "- **All tags:**"
             echo '```'
