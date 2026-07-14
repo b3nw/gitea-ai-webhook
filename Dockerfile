@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install the AI Review tool from a pinned GitHub commit (not PyPI)
 RUN pip install --no-cache-dir \
-  "git+https://github.com/b3nw/ai-review.git@764b124f155707f36ea38d327f0c443b65131ad4"
+  "git+https://github.com/b3nw/ai-review.git@5e1a6b0afec7a8378c481015d64483e680b7a5c9"
 
 # Copy custom prompt templates
 COPY prompts/ /app/prompts/
