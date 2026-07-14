@@ -1,6 +1,6 @@
 services:
   ai-webhook:
-    image: ghcr.io/b3nw/gitea-ai-webhook:kilocode-5e1a6b0-receiver-110ee67
+    image: ghcr.io/b3nw/gitea-ai-webhook:kilocode-e7f09e5-receiver-PLACEHOLDER
     container_name: gitea-ai-webhook
     restart: always
     ports:
